@@ -10,6 +10,11 @@ boneco_andando_baixo2:	.word 40, 36		#guarda a posição do boneco na imagem de 
 boneco_parado_esquerda:		.word 24, 100
 boneco_andando_esquerda1:	.word 8, 100
 boneco_andando_esquerda2:	.word 40, 100
+
+boneco_parado_cima:		.word 24, 68
+boneco_andando_cima1:		.word 8, 68
+boneco_andando_cima2:		.word 40, 68
+
 tamanho_boneco:		.word 16, 20
 
 .include "./Sprites/PalletTown.data"
@@ -138,10 +143,10 @@ MOVE_BONECO:
 		beq t0, t2, MOVE_DIREITA
 		
 		li t0, 'w'
-		#beq t0, t2, MOVE_CIMA
+		beq t0, t2, MOVE_CIMA
 		
 		li t0, 's'
-		#beq t0, t2, MOVE_BAIXO
+		beq t0, t2, MOVE_BAIXO
 			
 		j KEY2
 		
@@ -158,14 +163,14 @@ CHECA_POSICAO_BONECO_ESQUERDA:
 		li t0, 36
 		ble a1, t0, KEY2
 		
-		addi a1, a1, -2
+		addi a1, a1, -4
 		sw a1, 0(a0)
 		
 		la a3, boneco_andando_esquerda2
 		j INICIO
 		
 MOVE_TELA_ESQUERDA:
-		addi a1, a1, -2
+		addi a1, a1, -4
 		sw a1, 0(a0)
 		j CHECA_POSICAO_BONECO_ESQUERDA		
 		
@@ -180,20 +185,168 @@ CHECA_POSICAO_BONECO_DIREITA:
 		la a0, posicao_boneco_mapa
 		lw a1, 0(a0)
 		
-		li t0, 350
+		li t0, 270
 		bge a1, t0, KEY2
 		
-		addi a1, a1, 2
+		addi a1, a1, 4
 		sw a1, 0(a0)
 		
 		la a3, boneco_andando_esquerda2
-		j INICIO
+			
+		#não dá para reutilizar o código, pois o boneco será printado ao contrário
+		
+		li s0, 0xff0					#frame 0
+		slli s0, s0, 20
+		
+		la a0, PalletTown
+		lw a1, 0(a0)					#tamanho colunas
+		lw a2, 4(a0)					#tamanho linhas
+		addi a0, a0, 8
+		
+		la a4, posicao_imagem_mapa			#calcula onde vai começar a ser printado o mapa
+		lw t0, 4(a4)
+		mul t0, a1, t0
+		add a0, a0, t0
+		
+		lw t0, 0(a4)
+		add a0, a0, t0
+		
+		li t0, 0			#condição de parada colunas
+		li t1, 0			#condição de parada linhas
+		
+LOOP_MAPA_DIREITA:
+		lw t2, 0(a0)
+		sw t2, 0(s0)
+		
+		addi a0, a0, 4
+		addi s0, s0, 4
+		addi t0, t0, 4
+		
+		li t2, 320
+		bne t2, t0, LOOP_MAPA_DIREITA
+		
+		#se for igual, reinicia a linha
+		mv t0, zero
+		
+		add a0, a0, a1
+		addi a0, a0, -320		#volta a mesma coluna
+		addi t1, t1, 1
+		
+		li t2, 240
+		bne t2, t1, LOOP_MAPA_DIREITA
+		
+		#chegou ao final de printar o mapa
+			
+		li s0, 0xff0			#frame 0
+		slli s0, s0, 20
+		
+		la a0, posicao_boneco_mapa	#calcula onde vai começar a ser printado o boneco
+		lw t0, 0(a0)
+		add s0, s0, t0
+		
+		lw t0, 4(a0)
+		li t1, 320
+		mul t0, t1, t0
+		add s0, s0, t0			#posição na tela que o boneco será printado
+		
+		la a0, Personagens
+		lw a1, 0(a0)			#tamanho colunas imagem de sprites
+		lw a2, 4(a0)			#tamanho linhas imagem de sprites
+		addi a0, a0, 8
+		
+		#la a3, boneco_parado_baixo	#calcula onde está o boneco a ser printado
+		lw t0, 4(a3)
+		mul t0, a1, t0
+		add a0, a0, t0
+		
+		lw t0, 0(a3)
+		add a0, a0, t0
+		
+		la a3, tamanho_boneco
+		lw a4, 0(a3)			#tamanho linhas de um boneco
+		lw a5, 4(a3)			#tamanho colunas de um boneco
+		
+		add s0, s0, a4
+		li t0, 0			#condição de parada colunas
+		li t1, 0			#condição de parada linhas
+		
+BONECO_LOOP_DIREITA:
+		lb t2, 0(a0)
+		sb t2, 0(s0)
+		
+		addi a0, a0, 1
+		addi s0, s0, -1
+		addi t0, t0, 1
+		
+		bne a4, t0, BONECO_LOOP_DIREITA
+		
+		#se for igual, reinicia a linha
+		mv t0, zero
+		
+		addi s0, s0, 320
+		add s0, s0, a4
+						
+		add a0, a0, a1
+		sub a0, a0, a4			#volta a mesma coluna
+		addi t1, t1, 1
+		
+		bne a5, t1, BONECO_LOOP_DIREITA
+		j KEY2
 		
 MOVE_TELA_DIREITA:
-		addi a1, a1, 2
+		addi a1, a1, 4
 		sw a1, 0(a0)
 		j CHECA_POSICAO_BONECO_DIREITA		
 		
+MOVE_CIMA:		
+		la a0, posicao_imagem_mapa
+		lw a1, 4(a0)					#tamanho colunas
 		
+		bgt a1, zero, MOVE_TELA_CIMA		#É SÓ PRINTAR A TELA DE NOVO SEMPRE		
+
+CHECA_POSICAO_BONECO_CIMA:
+		la a0, posicao_boneco_mapa
+		lw a1, 4(a0)
+		
+		li t0, 6
+		ble a1, t0, KEY2
+		
+		addi a1, a1, -4
+		sw a1, 4(a0)
+		
+		la a3, boneco_andando_cima2
+		j INICIO
+		
+MOVE_TELA_CIMA:
+		addi a1, a1, -4
+		sw a1, 4(a0)
+		j CHECA_POSICAO_BONECO_CIMA		
+	
+MOVE_BAIXO:		
+		la a0, posicao_imagem_mapa
+		lw a1, 4(a0)					#tamanho colunas
+		
+		li t0, 80
+		blt a1, t0, MOVE_TELA_BAIXO		#É SÓ PRINTAR A TELA DE NOVO SEMPRE		
+
+CHECA_POSICAO_BONECO_BAIXO:
+		la a0, posicao_boneco_mapa
+		lw a1, 4(a0)
+		
+		li t0, 310
+		bge a1, t0, KEY2
+		
+		addi a1, a1, 4
+		sw a1, 4(a0)
+		
+		la a3, boneco_andando_baixo2
+		j INICIO
+		
+MOVE_TELA_BAIXO:
+		addi a1, a1, 4
+		sw a1, 4(a0)
+		j CHECA_POSICAO_BONECO_BAIXO		
+			
+
 		li a7, 10
 		ecall
